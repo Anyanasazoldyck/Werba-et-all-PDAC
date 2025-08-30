@@ -8,6 +8,10 @@ library(stringr)
 #set files ####
 plots="plots"
 dir.create(plots, recursive = T)
+
+objects_file= "objects"
+dir.create(objects_file, recursive = T)
+
 #-------------------------------
 #-------Load data --------
 
@@ -55,9 +59,9 @@ for (p in unique_samples) {
 seurat_list_no_liver = seurat_list[ss$Sample_ID] #I wanted to filter out liver 
 
 
-#merge 
+#---------------merge----------------------------------- 
 all_samples = merge(x=seurat_list_no_liver[[1]],y=seurat_list_no_liver[-1])
-
+saveRDS(all_samples, paste0(objects_file,"/all_samples.rds"))
 
 #---------------quality control ---------------------------
 
@@ -89,10 +93,24 @@ png(paste0(plots,"/PostQC_scatter.png"), res=300, height = 6*300, width = 15*300
 plot1 + plot2
 dev.off()
 
+#------------filtering blood cells ---------------------
+all_samples[["percent.eryth"]] <- PercentageFeatureSet(all_samples, features  = c("HBA1", "HBA2", "HBB", "HBM",  "ALAS2"))
+p= VlnPlot(all_samples, features = "percent.eryth", pt.size = 1)
+png(paste0(plots,"/PretQC_bloodcellexp.png"), res=300, height = 6*300, width = 15*300)
+p
+dev.off()
+all_samples=subset(all_samples,subset = percent.eryth <1)
+
+saveRDS(all_samples, paste0(objects_file,"/all_samples_filtered.rds"))
+
 
 #------------normalize data ------------------------------
 
 all_samples <- NormalizeData(all_samples, normalization.method = "LogNormalize", scale.factor = 10000)
 all_samples <- FindVariableFeatures(all_samples, selection.method = "vst", nfeatures = 2000)
-all_samples <- ScaleData(all_samples)
+all_samples <- ScaleData(all_samples, vars.to.regress = c("percent.mt"), features = VariableFeatures(all_samples) )
+saveRDS(all_samples, paste0(objects_file,"/all_samples_scaled.rds"))
+
+
+
 
