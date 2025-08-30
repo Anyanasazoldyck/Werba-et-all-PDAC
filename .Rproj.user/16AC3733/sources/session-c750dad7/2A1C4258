@@ -1,0 +1,28 @@
+{
+    "id": "2A1C4258",
+    "path": null,
+    "project_path": null,
+    "type": "object_explorer",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1756575438108.0,
+    "source_on_save": false,
+    "relative_order": 3,
+    "properties": {
+        "id": "506004eeacf34092995d915e140bade6",
+        "name": "seurat_list",
+        "title": "seurat_list",
+        "language": "R",
+        "source_window_id": "",
+        "Source": "Source"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1590592660456,
+    "encoding": "",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1756575438108,
+    "read_only": false,
+    "read_only_alternatives": []
+}
