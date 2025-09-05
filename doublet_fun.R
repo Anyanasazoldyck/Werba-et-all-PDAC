@@ -73,7 +73,7 @@ run_doubletfinder_lognorm <- function(
   
   
   # Return results + parameters for audit
-  list(object        = seu)
+  list( seu)
 }
 
 
@@ -90,3 +90,8 @@ res_list <- lapply(names(samp_split), function(nm) {
 })
 names(res_list) <- names(samp_split)
 saveRDS(res_list,"res_doublet_filtered.rds")
+
+
+
+
+

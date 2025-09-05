@@ -5,6 +5,8 @@ setwd("D:\\PDAC_SCRNA")
 library(Seurat)
 library(readxl)
 library(stringr)
+library(ggplot2)
+library(Azimuth)
 #set files ####
 plots="plots"
 dir.create(plots, recursive = T)
@@ -90,9 +92,83 @@ plot1 + plot2
 dev.off()
 
 
+
+#----------doublet_finder---------------------------------
+res_list <- lapply(names(samp_split), function(nm) {
+  out <- run_doubletfinder_lognorm(samp_split[[nm]])
+  out
+})
+names(res_list) <- names(samp_split)
+saveRDS(res_list,"res_doublet_filtered.rds")
+
+library(Seurat)
+
+
+
+all_samples = merge(x=seu_list[[1]], y=seu_list[-1])
+
+meta=all_samples@meta.data 
+write.csv(meta,"metadata_singletpredics.csv")
+col=colnames(meta)
+unwantedcols1=grepl("DF.classifications|pANN", col)
+meta <- meta[, !unwantedcols1]
+all_samples@meta.data =meta
+
+saveRDS(all_samples,"all_samples_no_doublets.rds")
 #------------normalize data ------------------------------
 
 all_samples <- NormalizeData(all_samples, normalization.method = "LogNormalize", scale.factor = 10000)
 all_samples <- FindVariableFeatures(all_samples, selection.method = "vst", nfeatures = 2000)
 all_samples <- ScaleData(all_samples)
 
+
+
+#-----------------PCA---------------------------------------
+all_samples <- RunPCA(all_samples, reduction.name = "unintegrated_PCA")
+
+
+png("plots/PCA_elbow.png")
+ElbowPlot(all_samples, reduction = "unintegrated_PCA")
+dev.off()
+
+stdev= all_samples@reductions$unintegrated_PCA@stdev
+percent_var= stdev^2 / sum(stdev^2)*100
+
+png("plots/PCA_Heatmaps.png", res = 300, width = 300*8, height = 300*8)
+DimHeatmap(all_samples, reduction = "unintegrated_PCA", dims = 1:10)
+dev.off()
+
+
+dims_to_use= 1:5
+
+#pre integration umap -------------------------------------
+all_samples= FindNeighbors(all_samples, dims_to_use, reduction = "unintegrated_PCA")
+all_samples <- FindClusters(all_samples, resolution = 0.2)
+all_samples <- RunUMAP(
+  all_samples,
+  reduction = "unintegrated_PCA",
+  dims = dims_to_use,                
+  reduction.name = "unintegrated_umap",
+  min.dist = 0.2,
+  spread = 8,
+  verbose = TRUE)
+  
+umap_theme = theme(plot.title = element_text(hjust = 0.5), 
+                   legend.position = "none",  
+                   axis.text = element_blank(), 
+                   axis.title = element_text(size = 12), 
+                   text = element_text(size = 12, family = "ArialMT"),
+                   axis.ticks = element_blank())
+png("plots/unintegrated_umap.png", res = 300, width = 300*6, height = 300*6)
+DimPlot(all_samples, reduction = "unintegrated_umap")
+dev.off()
+  
+  
+#--------------------integration------------------------------
+
+
+all_samples_integrated <- IntegrateLayers(
+  object = all_samples, method = CCAIntegration,
+  orig.reduction = "unintegrated_PCA", new.reduction = "integrated_PCA",
+  verbose = T
+)
