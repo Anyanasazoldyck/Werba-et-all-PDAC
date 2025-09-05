@@ -188,3 +188,17 @@ samples_list <- lapply(samples_list, FUN = function(x) {
   x <- ScaleData(x, features = features, verbose = FALSE)
   x <- RunPCA(x, features = features, verbose = FALSE)
 })
+
+#check if there are doublicated cells name 
+# for a list of objects
+sapply(samples_list, function(x) anyDuplicated(Cells(x)))
+#no doublicated cells name 
+
+#integrate using anchores
+anchores <- FindIntegrationAnchors(
+  object.list = samples_list,
+  anchor.features = features,
+  reduction = "rpca",
+  dims = 1:20
+)
+all_samples_integrated <- IntegrateData(anchorset = anchores, dims = 1:20)
