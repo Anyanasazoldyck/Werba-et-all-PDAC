@@ -5,11 +5,13 @@ setwd("D:\\PDAC_SCRNA")
 library(Seurat)
 library(readxl)
 library(stringr)
-library(ggplot2)
-library(Azimuth)
 #set files ####
 plots="plots"
 dir.create(plots, recursive = T)
+
+objects_file= "objects"
+dir.create(objects_file, recursive = T)
+
 #-------------------------------
 #-------Load data --------
 
@@ -56,10 +58,17 @@ for (p in unique_samples) {
 
 seurat_list_no_liver = seurat_list[ss$Sample_ID] #I wanted to filter out liver 
 
+saveRDS(seurat_list_no_liver,paste0(objects_file,"seurat_list_no_liver.rds"))
+#-----------------doublet finder for each sample individually-----------------
+#it is recommended to perform doublet finder on single samples. 
 
-#merge 
+
+
+
+
+#---------------merge----------------------------------- 
 all_samples = merge(x=seurat_list_no_liver[[1]],y=seurat_list_no_liver[-1])
-
+saveRDS(all_samples, paste0(objects_file,"/all_samples.rds"))
 
 #---------------quality control ---------------------------
 
@@ -91,39 +100,29 @@ png(paste0(plots,"/PostQC_scatter.png"), res=300, height = 6*300, width = 15*300
 plot1 + plot2
 dev.off()
 
+#------------filtering blood cells ---------------------
+all_samples[["percent.eryth"]] <- PercentageFeatureSet(all_samples, features  = c("HBA1", "HBA2", "HBB", "HBM",  "ALAS2"))
+p= VlnPlot(all_samples, features = "percent.eryth", pt.size = 1)
+png(paste0(plots,"/PretQC_bloodcellexp.png"), res=300, height = 6*300, width = 15*300)
+p
+dev.off()
+all_samples=subset(all_samples,subset = percent.eryth <1)
+
+saveRDS(all_samples, paste0(objects_file,"/all_samples_filtered.rds"))
 
 
-#----------doublet_finder---------------------------------
-res_list <- lapply(names(samp_split), function(nm) {
-  out <- run_doubletfinder_lognorm(samp_split[[nm]])
-  out
-})
-names(res_list) <- names(samp_split)
-saveRDS(res_list,"res_doublet_filtered.rds")
-
-library(Seurat)
-
-
-
-all_samples = merge(x=seu_list[[1]], y=seu_list[-1])
-
-meta=all_samples@meta.data 
-write.csv(meta,"metadata_singletpredics.csv")
-col=colnames(meta)
-unwantedcols1=grepl("DF.classifications|pANN", col)
-meta <- meta[, !unwantedcols1]
-all_samples@meta.data =meta
-
-saveRDS(all_samples,"all_samples_no_doublets.rds")
 #------------normalize data ------------------------------
 
 all_samples <- NormalizeData(all_samples, normalization.method = "LogNormalize", scale.factor = 10000)
 all_samples <- FindVariableFeatures(all_samples, selection.method = "vst", nfeatures = 2000)
-all_samples <- ScaleData(all_samples)
+all_samples <- ScaleData(all_samples, vars.to.regress = c("percent.mt"), features = VariableFeatures(all_samples) )
+saveRDS(all_samples, paste0(objects_file,"/all_samples_scaled.rds"))
 
 
 
-#-----------------PCA---------------------------------------
+#pre integration vizulization (This part was not used in the final run )-------
+
+#-------------pre integration PCA---------------------------------------
 all_samples <- RunPCA(all_samples, reduction.name = "unintegrated_PCA")
 
 
@@ -152,7 +151,7 @@ all_samples <- RunUMAP(
   min.dist = 0.2,
   spread = 8,
   verbose = TRUE)
-  
+
 umap_theme = theme(plot.title = element_text(hjust = 0.5), 
                    legend.position = "none",  
                    axis.text = element_blank(), 
@@ -162,13 +161,30 @@ umap_theme = theme(plot.title = element_text(hjust = 0.5),
 png("plots/unintegrated_umap.png", res = 300, width = 300*6, height = 300*6)
 DimPlot(all_samples, reduction = "unintegrated_umap")
 dev.off()
-  
-  
-#--------------------integration------------------------------
 
 
-all_samples_integrated <- IntegrateLayers(
-  object = all_samples, method = CCAIntegration,
-  orig.reduction = "unintegrated_PCA", new.reduction = "integrated_PCA",
-  verbose = T
-)
+
+
+
+#integration --------------------------------
+samples_list <- SplitObject(all_samples, split.by = "orig.ident")
+#rename projects 
+# Give each Seurat object a unique project name
+for (i in seq_along(samples_list)) {
+  samples_list[[i]]@project.name <- names(samples_list)[i]
+}
+#normalize 
+# normalize and identify variable features for each dataset independently
+samples_list <- lapply(samples_list, function(x) {
+  x <- NormalizeData(x)
+  x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 2000)
+})
+#features that are most variable across all samples 
+features <- SelectIntegrationFeatures(object.list = samples_list, nfeatures = 1000)
+
+
+#use these features to scale and dimentionally reduce the data 
+samples_list <- lapply(samples_list, FUN = function(x) {
+  x <- ScaleData(x, features = features, verbose = FALSE)
+  x <- RunPCA(x, features = features, verbose = FALSE)
+})
