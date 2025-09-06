@@ -74,8 +74,6 @@ run_doubletfinder_lognorm <- function(
   
   
   df.col <- grep("^DF.classification", colnames(seu@meta.data), value = TRUE)[1]
-  
-  
   seu <- subset(seu, cells = colnames(seu)[seu@meta.data[[df.col]] == "Singlet"])
   
   
