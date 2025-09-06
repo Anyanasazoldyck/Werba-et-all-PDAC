@@ -202,3 +202,4 @@ anchores <- FindIntegrationAnchors(
   dims = 1:20
 )
 all_samples_integrated <- IntegrateData(anchorset = anchores, dims = 1:20)
+saveRDS(anchores,"my_anchors.rds")
