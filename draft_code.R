@@ -1,10 +1,13 @@
 setwd("D:\\PDAC_SCRNA")
 
 
-
+library(ggplot2)
 library(Seurat)
 library(readxl)
 library(stringr)
+library(dplyr)
+library(tidyr)
+library(RColorBrewer)
 #set files ####
 plots="plots"
 dir.create(plots, recursive = T)
@@ -203,3 +206,90 @@ anchores <- FindIntegrationAnchors(
 )
 all_samples_integrated <- IntegrateData(anchorset = anchores, dims = 1:20)
 saveRDS(anchores,"my_anchors.rds")
+saveRDS(all_samples_integrated,"all_samples_integrated.rds")
+
+
+
+
+#------------post integration processing -------------
+all_samples_integrated <- readRDS("D:/PDAC_SCRNA/objects/all_samples_integrated.rds")
+
+
+DefaultAssay(all_samples_integrated) <- "integrated"
+all_samples_integrated <- ScaleData(all_samples_integrated)
+all_samples_integrated <- RunPCA(all_samples_integrated)
+all_samples_integrated <- FindNeighbors(all_samples_integrated, dims = 1:5)
+all_samples_integrated <- FindClusters(all_samples_integrated, resolution = 0.2)
+all_samples_integrated <- RunUMAP(all_samples_integrated, dims = 1:5)
+
+p1= DimPlot(all_samples_integrated, reduction = "umap",group.by = "integrated_snn_res.0.2")
+p2= DimPlot(all_samples_integrated, reduction = "umap", group.by = "orig.ident")
+
+p1
+png("plots/integrated_umap_res_02.png", res = 300, width = 300*10, height = 300*5)
+p1+p2
+dev.off()
+
+png("plots/integrated_umap_Treatment.png", res = 300, width = 300*5, height = 300*5)
+DimPlot(all_samples_integrated, reduction = "umap",group.by = "Treatment")
+dev.off()
+
+
+#find markers for each cluster
+DefaultAssay(all_samples_integrated) <- "RNA"
+all_samples_integrated <- JoinLayers(all_samples_integrated, assay = "RNA")
+?JoinLayers
+markers <- FindAllMarkers(all_samples_integrated,only.pos = T)
+saveRDS(all_samples_integrated,"all_samples_integrated_dim_reduction.rds")
+
+write.csv(markers,"csv/cluster_markers.csv")
+
+
+#filter markers 
+markers.sig <- markers[,"p_val_adj"<0.05 & "avg_log2FC">1]
+topn=markers %>% dplyr::group_by(cluster) %>% 
+  dplyr::arrange(p_val_adj, .by_group = T) %>% dplyr::slice_head(n=5)
+topn$gene
+p=DoHeatmap(all_samples_integrated, features = topn$gene)
+
+png("plots/heatmap.png", res = 300, width = 300*8, height = 300*8)
+p
+dev.off()
+
+
+
+#make a complex hm
+DefaultAssay(all_samples_integrated)<-"RNA"
+genes <- unique(topn$gene)
+df <- FetchData(all_samples_integrated, vars = genes)
+df$cluster <- Idents(all_samples_integrated)[rownames(df)]
+colnames(df)
+head(df)
+
+df_longer<- pivot_longer(df,cols = !cluster,names_to = "genes", values_to = "expression")
+
+
+df_longer<-df_longer %>% group_by(cluster,genes) %>% summarise(mean_expression =mean(expression),.groups = "drop")
+
+hm_mtx <- as.data.frame(pivot_wider(df_longer,names_from = cluster, values_from = mean_expression)) 
+rownames(hm_mtx)<-hm_mtx$genes
+hm_mtx$genes<-NULL
+mat <- t(scale(t(as.matrix(hm_mtx))))
+
+
+
+
+library(ComplexHeatmap)
+#define color pal 
+cols = colorRampPalette(brewer.pal(9, "RdYlBu"))(100)
+?colorRampPalette
+p=Heatmap(mat, name = "Z-score",
+        cluster_rows = T, cluster_columns = F,
+        show_row_names = TRUE, show_column_names = TRUE, color_space = cols)
+png("plots/complexheatmap.png", res = 300, width = 300*8, height = 300*10)
+p
+dev.off()
+
+write.csv(topn,"csv/top_cluster_markers.csv")
+
+
