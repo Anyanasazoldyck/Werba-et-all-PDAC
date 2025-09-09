@@ -8,6 +8,8 @@ library(stringr)
 library(dplyr)
 library(tidyr)
 library(RColorBrewer)
+library (ggplot2)
+library(patchwork)
 #set files ####
 plots="plots"
 dir.create(plots, recursive = T)
@@ -156,7 +158,7 @@ all_samples <- RunUMAP(
   verbose = TRUE)
 
 umap_theme = theme(plot.title = element_text(hjust = 0.5), 
-                   legend.position = "none",  
+                   
                    axis.text = element_blank(), 
                    axis.title = element_text(size = 12), 
                    text = element_text(size = 12, family = "ArialMT"),
@@ -293,3 +295,57 @@ dev.off()
 write.csv(topn,"csv/top_cluster_markers.csv")
 
 
+#Identifying the prolifrating cells 
+ki_67 =FeaturePlot(all_samples_integrated, features = "MKI67", pt.size = 1, order = T)&umap_theme
+
+
+png("plots/ki-67.png", res = 300, width = 300*5, height = 300*5)
+ki_67
+dev.off()
+
+
+#identifying each of the cell type 
+#Identifying immune related calls on the umap 
+T_cell_markers = c("TRBC2","IL7R","CCL5")
+
+t= FeaturePlot(all_samples_integrated, features = T_cell_markers, pt.size = 1, order = F)&umap_theme
+
+png("plots/T_Cell.png", res = 300, width = 300*5, height = 300*5)
+t
+dev.off()
+
+NK= c("NKG7", "GZMB")
+nk= FeaturePlot(all_samples_integrated, features = NK, pt.size = 1, order = F)&umap_theme
+png("plots/NK.png", res = 300, width = 300*5, height = 300*5)
+nk
+dev.off()
+
+Myeloid = c("CD68","CCL12")
+m= FeaturePlot(all_samples_integrated, features = Myeloid, pt.size = 1, order = F)&umap_theme
+
+png("plots/Meyloid.png", res = 300, width = 300*5, height = 300*5)
+m
+dev.off()
+
+#the rest of the process was done on pangloDP
+
+
+#set the new ident
+ss <- read_xlsx("csv/ss.xlsx",sheet = "Sheet2")
+
+
+
+new.cluster.ids = ss$Type
+
+names(new.cluster.ids) = levels(all_samples_integrated)
+all_samples_integrated = RenameIdents(all_samples_integrated, new.cluster.ids)
+all_samples_integrated = AddMetaData(all_samples_integrated, all_samples_integrated@active.ident, col.name = "cell.types")
+
+
+
+
+p=DimPlot(all_samples_integrated, label = T, label.size = 6, repel = T,pt.size = 1)+umap_theme
+
+png("plots/labeled_umap.png", res = 300, width = 300*10, height = 300*10)
+p
+dev.off()
