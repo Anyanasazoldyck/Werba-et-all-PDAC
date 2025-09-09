@@ -364,3 +364,40 @@ p=ggplot(df,aes(x=Sample,y=prportion,fill = Cell_Type)) +geom_col() +
 png("plots/cell_type_proportion.png", res = 300, width = 300*5, height = 300*5)
 p
 dev.off()
+
+#redraw the heatmap with labeled clusters
+
+#make a complex hm
+genes=top_cluster_markers$gene
+#make a complex hm
+DefaultAssay(all_samples_integrated)<-"RNA"
+df <- FetchData(all_samples_integrated, vars = genes)
+df$cluster <- Idents(all_samples_integrated)[rownames(df)]
+colnames(df)
+head(df)
+
+df_longer<- pivot_longer(df,cols = !cluster,names_to = "genes", values_to = "expression")
+
+
+df_longer<-df_longer %>% group_by(cluster,genes) %>% summarise(mean_expression =mean(expression),.groups = "drop")
+
+hm_mtx <- as.data.frame(pivot_wider(df_longer,names_from = cluster, values_from = mean_expression)) 
+rownames(hm_mtx)<-hm_mtx$genes
+hm_mtx$genes<-NULL
+mat <- t(scale(t(as.matrix(hm_mtx))))
+
+
+
+
+library(ComplexHeatmap)
+#define color pal 
+cols = colorRampPalette(brewer.pal(9, "RdYlBu"))(100)
+?colorRampPalette
+p=Heatmap(mat, name = "Z-score",
+          cluster_rows = T, cluster_columns = T,
+          show_row_names = TRUE, show_column_names = TRUE, color_space = cols)
+png("plots/complexheatmap_annotated.png", res = 300, width = 300*8, height = 300*10)
+p
+dev.off()
+
+
