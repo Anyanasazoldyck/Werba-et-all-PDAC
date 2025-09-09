@@ -349,3 +349,18 @@ p=DimPlot(all_samples_integrated, label = T, label.size = 6, repel = T,pt.size =
 png("plots/labeled_umap.png", res = 300, width = 300*10, height = 300*10)
 p
 dev.off()
+
+df <- as.data.frame(table(all_samples_integrated$orig.ident, all_samples_integrated$cell.types))
+colnames(df)<-c("Sample","Cell_Type","Frequency")
+df=df %>% group_by(Sample,Cell_Type) %>% mutate(total_cell_type_per_sample=sum(Frequency))
+df<- df %>% group_by(Sample) %>% mutate(total_cells=sum(total_cell_type_per_sample))
+df <- df %>% group_by(Sample,Cell_Type) %>% mutate(prportion=total_cell_type_per_sample/total_cells*100)
+write.csv(df,"csv/proporion_of_cells_per_sample.csv")
+
+p=ggplot(df,aes(x=Sample,y=prportion,fill = Cell_Type)) +geom_col() +
+  xlab("Sample_ID")+
+  ylab("Proportion")+my_theme+theme(axis.text.x = element_text(angle = 90))
+
+png("plots/cell_type_proportion.png", res = 300, width = 300*5, height = 300*5)
+p
+dev.off()
