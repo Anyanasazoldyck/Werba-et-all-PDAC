@@ -64,13 +64,6 @@ for (p in unique_samples) {
 seurat_list_no_liver = seurat_list[ss$Sample_ID] #I wanted to filter out liver 
 
 saveRDS(seurat_list_no_liver,paste0(objects_file,"seurat_list_no_liver.rds"))
-#-----------------doublet finder for each sample individually-----------------
-#it is recommended to perform doublet finder on single samples. 
-
-
-
-
-
 #---------------merge----------------------------------- 
 all_samples = merge(x=seurat_list_no_liver[[1]],y=seurat_list_no_liver[-1])
 saveRDS(all_samples, paste0(objects_file,"/all_samples.rds"))
@@ -114,6 +107,19 @@ dev.off()
 all_samples=subset(all_samples,subset = percent.eryth <1)
 
 saveRDS(all_samples, paste0(objects_file,"/all_samples_filtered.rds"))
+
+#-----------------doublet finder for each sample individually-----------------
+
+samp_split <- SplitObject(all_samples)
+
+res_list <- lapply(names(samp_split), function(nm) {
+  out <- run_doubletfinder_lognorm(samp_split[[nm]])
+  out
+})
+names(res_list) <- names(samp_split)
+saveRDS(res_list,"res_doublet_filtered.rds")
+
+
 
 
 #------------normalize data ------------------------------
@@ -399,5 +405,16 @@ p=Heatmap(mat, name = "Z-score",
 png("plots/complexheatmap_annotated.png", res = 300, width = 300*8, height = 300*10)
 p
 dev.off()
+
+
+###############################################################################################
+#------------------identifying malingant epithilal cells using inferCNV-------------------------
+###############################################################################################
+#call INFERCNV anf rJAGS
+library(infercnv)
+library(rjags)
+
+
+
 
 

@@ -81,12 +81,11 @@ run_doubletfinder_lognorm <- function(
   list(seu)
 }
 
+
+
 res_list <- lapply(names(samp_split), function(nm) {
   out <- run_doubletfinder_lognorm(samp_split[[nm]])
   out
 })
 names(res_list) <- names(samp_split)
 saveRDS(res_list,"res_doublet_filtered.rds")
-
-
-

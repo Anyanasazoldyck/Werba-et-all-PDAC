@@ -5,3 +5,4 @@ GSE205013_RAW.tar
 *.csv
 *.png
 *.RData
+*.infercnv_obj
