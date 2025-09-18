@@ -407,6 +407,11 @@ p
 dev.off()
 
 
+#save the object without the integrated layer to reduce size #####
+
+all_samples_no_int_asssay <- all_samples_integrated_labeled
+all_samples_no_int_asssay@assays$integrated <- NULL  
+saveRDS(all_samples_no_int_asssay,"objects/all_samples_no_integration_layer.rds")
 ###############################################################################################
 #------------------identifying malingant epithilal cells using inferCNV-------------------------
 ###############################################################################################
