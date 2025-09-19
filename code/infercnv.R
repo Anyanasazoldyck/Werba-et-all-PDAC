@@ -11,100 +11,7 @@ library(dplyr)
 all_samples <- readRDS("D:/Anya/pdac/all_samples_no_integration_layer.rds")
 sample_list <- SplitObject(all_samples, split.by = "orig.ident")
 
-#set the one object p03 -----------------------
-object <- sample_list$P03
 
-
-annotation_df <- data.frame(
-  cell_name  = colnames(object),
-  cell_type  = as.character(object@active.ident),
-  stringsAsFactors = FALSE
-)
-
-# define obs/ref
-obs_types  <- c("Epithelial", "Prolif_Epithelial")          
-ref_types  <- c("CAFs","TCell/NK","Prolif_Lymphoid","Myeloid")  
-ref_mask <- annotation_df$group %in% ref_types
-set.seed(1)
-if (sum(ref_mask) > 1000) {
-  keep_ref <- sample(which(ref_mask), 1000)
-  keep_idx <- c(keep_ref, which(!ref_mask))
-  annotation_df <- annotation_df[sort(keep_idx), , drop = FALSE]
-}
-
-
-
-write.table(
-  annotation_df,
-  file = "full_annotation.tsv",
-  sep = "\t", col.names = FALSE, row.names = FALSE, quote = FALSE
-)
-
-#I did not use endo as references 
-keep_cells <- annotation_df$cell_name
-object_count_sub <- GetAssayData(object, slot = "counts")[, keep_cells, drop = FALSE]
-stopifnot(all(colnames(object_count_sub) == keep_cells))
-
-# create inferCNV object
-ref_group_names <- ref_types 
-infercnv_obj <- infercnv::CreateInfercnvObject(
-  raw_counts_matrix = as.matrix(object_count_sub),
-  annotations_file  = "full_annotation.tsv",
-  delim             = "\t",
-  gene_order_file   = "hg38_gencode_v27.tsv",
-  ref_group_names   = ref_group_names,
-
-)
-
-
-infercnv_obj <- infercnv::run(
-  infercnv_obj,
-  cutoff            = 0.1,                 
-  out_dir           = "P03",
-  cluster_by_groups = TRUE,               
-  denoise           = TRUE,
-  HMM               = TRUE,
-  analysis_mode     = "subclusters",
-  leiden_resolution = 0.01,
-  up_to_step        = 15                   
-)
-
-
-# which one had state more than 1 based on hmm obdervation
-pred <- read_tsv("P03/17_HMM_predHMMi6.leiden.hmm_mode-subclusters.pred_cnv_regions.dat",
-                 show_col_types = FALSE)
-
-grp_path <- file.path(out_dir, "infercnv.17_HMM_predHMMi6.leiden.hmm_mode-subclusters.observation_groupings.txt")
-grp_raw <- read.table(grp_path, sep=" ")
-grp_raw <- grp_raw[,1:5]
-grp_raw$barcode=rownames(grp_raw)
-colnames(grp_raw)
-grp <- grp_raw[,c("barcode","Dendrogram.Group")]
-
-colnames(grp)<- c("cell_name","cluster")
-sid <- function(x) sub(".*(s\\d+).*", "\\1", x)  
-
-pred$cluster_key <- sid(pred$cell_group_name)
-grp$cluster_key  <- sid(grp$cluster)
-grp <- grp[,c("cell_name","cluster_key")]
-mal_clusters <- pred %>%
-  filter(state > 1) %>%             
-  pull(cluster_key) %>%
-  unique()
-
-
-# 3) attach to Seurat object
-object$infercnv_hmm_cluster <- grp$cluster[ match(colnames(object), grp$cell_name) ]
-object$infercnv_hmm_call <- ifelse(object$infercnv_hmm_cluster %in% mal_clusters,
-                                   "malignant","normal")
-
-table(object$infercnv_hmm_call, useNA="ifany")
-
-
-p03 <- DimPlot(object, group.by = "infercnv_hmm_call")
-png ("hmm_pred.png", width = 300*6, height = 300*6, res = 300)
-p03
-dev.off()
 #create a function that automates this for each sample ####
 run_inferCNV_hmm <- function(object, sample_id, gene_loc_file,
                              out_root="infercnv_runs",
@@ -164,7 +71,6 @@ run_inferCNV_hmm <- function(object, sample_id, gene_loc_file,
     denoise           = TRUE,
     HMM               = TRUE,
     leiden_resolution = 0.01,
-    up_to_step        = 17
   )
   
   return(dir_out)  # just return the output folder path
