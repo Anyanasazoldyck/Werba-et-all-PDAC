@@ -1,3 +1,17 @@
+
+setwd("D:\\PDAC_SCRNA")
+
+
+library(ggplot2)
+library(Seurat)
+library(readxl)
+library(stringr)
+library(dplyr)
+library(tidyr)
+library(RColorBrewer)
+library (ggplot2)
+library(patchwork)
+
 ###############################################################################################
 #--------------epithilial cells analysis ---------------------
 ###############################################################################################
@@ -120,7 +134,7 @@ names(gene_list) <- rownames(treated_vs_naive)
 
 gene_list<-na.omit(gene_list)
 
-BiocParallel::register(BiocParallel::SerialParam()) #fix serialize error
+BiocParallel::register(BiocParallel::SerialParam()) 
 options(mc.cores = 1)
 set.seed(1)
 
@@ -161,7 +175,7 @@ p
 dev.off()
 
 
-
+saveRDS(sc.subset,"epi.rds")
 #cell proportions by subtype------------
 df <- as.data.frame(table(sc.subset$orig.ident, sc.subset$Subtype))
 colnames(df)<-c("Sample","Cell_Type","Frequency")
@@ -178,3 +192,7 @@ p=ggplot(df,aes(x=Sample,y=prportion,fill = Cell_Type)) +geom_col() +
 png("plots/tumor_type_proportion.png", res = 300, width = 300*5, height = 300*5)
 p
 dev.off()
+
+
+
+
