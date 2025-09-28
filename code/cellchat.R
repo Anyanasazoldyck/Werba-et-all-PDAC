@@ -163,24 +163,3 @@ netVisual_bubble(merged_cellchat, sources.use = "CAF", targets.use = c(1:5),  co
 dev.off()
 
 
-
-#-------------------------------------------
-#-------what is popping up in treatment and how is it interacting -------
-#--------------------------------------
-
-
-# plot the sending and recieving scores
-
-
-
-p=netAnalysis_signalingRole_heatmap(cell_chate_treated, pattern = "outgoing")
-p1=netAnalysis_signalingRole_heatmap(cell_chate_treated, pattern = "incoming")
-png("cell_chat/treated_system_level.png", res = 300, height = 300*5, width = 300*10)
-p+p1
-dev.off()
-#it seems like CAF and Myeloid are talking through OSM pathway
-netAnalysis_signalingRole_scatter(cell_chate_treated, signaling = c("OSM"))
-
-# identify enriched pairs in osm
-pairLR = extractEnrichedLR(cell_chate_treated, signaling = "OSM", geneLR.return = FALSE)
-pairLR
