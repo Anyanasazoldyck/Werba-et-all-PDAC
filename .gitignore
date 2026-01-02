@@ -1,7 +1,7 @@
 GSE205013_RAW.tar
 /GSE205013_RAW
-/objects
-/plots
+objects/
+plots/
 *.rds
 .Rproj.user
 *.csv
