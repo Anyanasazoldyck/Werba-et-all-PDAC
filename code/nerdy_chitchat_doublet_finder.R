@@ -50,7 +50,7 @@ nExp.adj <- round(nExp.poi * (1 - homotypic.prop)) # expected number of doublets
 
 
 # ---- Run DoubletFinder ----
-print(">> Running DoubletFinder...")
+print(">> Running DoubletFinder/mnt/d/Command Line Tutorials/raw_data/data_d4.")
 seu <- DoubletFinder::doubletFinder(
   seu = seu,
   PCs = pcs_use, 

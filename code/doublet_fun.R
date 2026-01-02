@@ -44,7 +44,7 @@ run_doubletfinder_lognorm <- function(
   
   
   # ---- Estimate multiplet rate from 10x lookup table ----
-  print(">> Estimating multiplet rate from 10x table...")
+  print(">> Estimating multiplet rate from 10x table/mnt/d/Command Line Tutorials/raw_data/data_d4.")
   multiplet_rates_10x <- data.frame( 'Multiplet_rate'= c(0.004, 0.008, 0.0160, 0.023, 0.031, 0.039, 0.046, 0.054, 0.061, 0.069, 0.076),
                                      'Loaded_cells' = c(800, 1600, 3200, 4800, 6400, 8000, 9600, 11200, 12800, 14400, 16000), 
                                      'Recovered_cells' = c(500, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000) ) 
@@ -61,7 +61,7 @@ run_doubletfinder_lognorm <- function(
   
   
   # ---- Run DoubletFinder ----
-  print(">> Running DoubletFinder...")
+  print(">> Running DoubletFinder/mnt/d/Command Line Tutorials/raw_data/data_d4.")
   seu <- DoubletFinder::doubletFinder(
     seu = seu,
     PCs = pcs_use, 
