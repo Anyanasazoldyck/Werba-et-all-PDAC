@@ -8,3 +8,7 @@ plots/
 *.png
 *.RData
 *.infercnv_obj
+*.gz
+Data/Sessions/identifying_malignant_epithlial_cells.R
+*.txt
+*.tsv
